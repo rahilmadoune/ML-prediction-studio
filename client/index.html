@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ML Prediction Studio — Analytics Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+<style>
+:root {
+  --bg:    #060810;
+  --s1:    #0d1117;
+  --s2:    #161b27;
+  --s3:    #1e2535;
+  --border:  rgba(255,255,255,0.06);
+  --border2: rgba(255,255,255,0.12);
+  --text:  #e2e8f0;
+  --muted: #64748b;
+  --mono:  'Space Mono', monospace;
+  --sans:  'Outfit', sans-serif;
+  --c0:#38bdf8; --c0b:rgba(56,189,248,0.15);
+  --c1:#a78bfa; --c1b:rgba(167,139,250,0.15);
+  --c2:#34d399; --c2b:rgba(52,211,153,0.15);
+  --c3:#fb923c; --c3b:rgba(251,146,60,0.15);
+  --c4:#f472b6; --c4b:rgba(244,114,182,0.15);
+  --c5:#facc15; --c5b:rgba(250,204,21,0.15);
+  --c6:#60a5fa; --c6b:rgba(96,165,250,0.15);
+  --c7:#f87171; --c7b:rgba(248,113,113,0.15);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(56,189,248,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(56,189,248,0.025) 1px,transparent 1px);background-size:44px 44px;pointer-events:none;z-index:0;}
+.app{position:relative;z-index:1;display:flex;flex-direction:column;min-height:100vh;}
+
+/* NAV */
+nav{display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:58px;border-bottom:1px solid var(--border);background:rgba(6,8,16,0.85);backdrop-filter:blur(14px);position:sticky;top:0;z-index:100;}
+.nav-brand{display:flex;align-items:center;gap:11px;}
+.nav-logo{width:30px;height:30px;background:linear-gradient(135deg,#38bdf8,#a78bfa);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;}
+.nav-title{font-size:14px;font-weight:700;letter-spacing:-0.3px;}
+.nav-sub{font-family:var(--mono);font-size:9px;color:var(--muted);}
+.nav-right{display:flex;align-items:center;gap:14px;}
+#api-url-input{background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:10px;padding:6px 12px;width:200px;outline:none;transition:border-color 0.2s;}
+#api-url-input:focus{border-color:#38bdf8;}
+.status-pill{display:flex;align-items:center;gap:7px;padding:6px 13px;border-radius:100px;background:var(--s2);border:1px solid var(--border);font-family:var(--mono);font-size:10px;color:var(--muted);cursor:pointer;transition:border-color 0.2s;}
+.status-pill:hover{border-color:var(--border2);}
+.pulse{width:7px;height:7px;border-radius:50%;background:var(--muted);transition:background 0.3s;}
+.pulse.on{background:#34d399;box-shadow:0 0 0 3px rgba(52,211,153,0.2);animation:pulseA 2s infinite;}
+.pulse.err{background:#f87171;box-shadow:0 0 0 3px rgba(248,113,113,0.2);}
+@keyframes pulseA{0%,100%{box-shadow:0 0 0 3px rgba(52,211,153,0.2);}50%{box-shadow:0 0 0 7px rgba(52,211,153,0);}}
+
+/* MAIN */
+main{flex:1;padding:24px 28px;display:flex;flex-direction:column;gap:20px;}
+.section-label{font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.14em;display:flex;align-items:center;gap:8px;}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* CARDS */
+.card{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:20px;transition:border-color 0.2s;}
+.card:hover{border-color:var(--border2);}
+.card-head{display:flex;align-items:center;gap:9px;margin-bottom:16px;}
+.card-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
+.ci-blue{background:rgba(56,189,248,0.12);}
+.ci-purple{background:rgba(167,139,250,0.12);}
+.ci-green{background:rgba(52,211,153,0.12);}
+.ci-orange{background:rgba(251,146,60,0.12);}
+.card-title{font-size:12px;font-weight:700;}
+.card-sub{font-family:var(--mono);font-size:9px;color:var(--muted);}
+
+/* STAT CARDS */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+@media(max-width:860px){.stats-row{grid-template-columns:1fr 1fr;}}
+.stat-card{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:18px 20px;position:relative;overflow:hidden;}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--al,#38bdf8);}
+.stat-label{font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.09em;margin-bottom:10px;}
+.stat-value{font-size:26px;font-weight:800;letter-spacing:-1px;}
+.stat-badge{display:inline-block;margin-top:8px;padding:3px 8px;border-radius:5px;font-family:var(--mono);font-size:9px;}
+
+/* INPUT PANEL */
+.input-panel{display:grid;grid-template-columns:360px 1fr;gap:14px;}
+@media(max-width:860px){.input-panel{grid-template-columns:1fr;}}
+.tabs{display:flex;gap:4px;background:var(--s2);border-radius:9px;padding:4px;margin-bottom:14px;}
+.tab{flex:1;padding:7px;background:transparent;border:none;border-radius:6px;color:var(--muted);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all 0.2s;}
+.tab.active{background:var(--s3);color:var(--text);}
+.drop-zone{border:2px dashed rgba(255,255,255,0.07);border-radius:12px;padding:28px 14px;text-align:center;cursor:pointer;position:relative;transition:border-color 0.2s,background 0.2s;}
+.drop-zone:hover,.drop-zone.over{border-color:#38bdf8;background:rgba(56,189,248,0.04);}
+.drop-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.dz-icon{font-size:28px;margin-bottom:8px;}
+.dz-title{font-size:12px;font-weight:600;margin-bottom:4px;}
+.dz-hint{font-family:var(--mono);font-size:9px;color:var(--muted);}
+.dz-file{display:none;margin-top:10px;padding:9px 12px;background:var(--s2);border-radius:7px;font-family:var(--mono);font-size:10px;color:#38bdf8;text-align:left;}
+.json-area{width:100%;min-height:150px;background:var(--s2);border:1px solid var(--border);border-radius:10px;color:#34d399;font-family:var(--mono);font-size:10px;padding:12px;resize:vertical;outline:none;transition:border-color 0.2s;line-height:1.8;}
+.json-area:focus{border-color:#38bdf8;}
+.json-area::placeholder{color:rgba(100,116,139,0.45);}
+.btn-predict{width:100%;margin-top:12px;padding:13px;background:linear-gradient(135deg,#1d4ed8,#38bdf8);border:none;border-radius:11px;color:#fff;font-family:var(--sans);font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 18px rgba(56,189,248,0.18);}
+.btn-predict:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 8px 28px rgba(56,189,248,0.28);}
+.btn-predict:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+
+/* CHARTS GRID */
+.charts-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+@media(max-width:1050px){.charts-grid{grid-template-columns:1fr 1fr;}}
+@media(max-width:660px){.charts-grid{grid-template-columns:1fr;}}
+.chart-wrap{position:relative;height:240px;display:flex;align-items:center;justify-content:center;}
+
+/* TABLE */
+.table-scroll{overflow-x:auto;border-radius:10px;border:1px solid var(--border);}
+table{width:100%;border-collapse:collapse;font-size:11px;}
+thead tr{background:var(--s2);}
+th{padding:10px 14px;text-align:left;font-family:var(--mono);font-size:8px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;white-space:nowrap;border-bottom:1px solid var(--border);}
+tbody tr{border-bottom:1px solid var(--border);transition:background 0.12s;}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:rgba(255,255,255,0.02);}
+td{padding:10px 14px;font-family:var(--mono);font-size:10px;}
+.pred-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:6px;font-weight:700;font-size:10px;}
+.pred-chip::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor;}
+.conf-row{display:flex;align-items:center;gap:8px;}
+.conf-bg{flex:1;height:5px;background:var(--s3);border-radius:3px;overflow:hidden;min-width:70px;}
+.conf-fill{height:100%;border-radius:3px;transition:width 0.8s cubic-bezier(0.4,0,0.2,1);}
+.conf-num{font-size:10px;color:var(--muted);min-width:32px;text-align:right;}
+
+/* EMPTY */
+.empty{text-align:center;padding:50px 20px;color:var(--muted);font-family:var(--mono);font-size:11px;}
+.empty-icon{font-size:36px;margin-bottom:10px;opacity:0.35;}
+
+/* SPINNER */
+.spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,0.12);border-top-color:#38bdf8;border-radius:50%;animation:spin 0.7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* TOAST */
+#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--s2);border:1px solid var(--border2);border-radius:100px;padding:10px 20px;font-family:var(--mono);font-size:11px;display:flex;align-items:center;gap:8px;box-shadow:0 8px 36px rgba(0,0,0,0.6);transition:transform 0.4s cubic-bezier(0.34,1.56,0.64,1);z-index:9999;white-space:nowrap;}
+#toast.show{transform:translateX(-50%) translateY(0);}
+
+/* ANIMATIONS */
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+.fu{animation:fadeUp 0.45s ease both;}
+.fd1{animation-delay:0.05s;}.fd2{animation-delay:0.12s;}.fd3{animation-delay:0.2s;}.fd4{animation-delay:0.28s;}
+
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.09);border-radius:2px;}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- NAV -->
+<nav>
+  <div class="nav-brand">
+    <div class="nav-logo">🧠</div>
+    <div>
+      <div class="nav-title">ML Prediction Studio</div>
+      <div class="nav-sub">Analytics Dashboard · v2.0</div>
+    </div>
+  </div>
+  <div class="nav-right">
+    <input id="api-url-input" type="text" value="http://localhost:8000" placeholder="API URL"/>
+    <div class="status-pill" onclick="checkHealth()" title="Click to refresh">
+      <div class="pulse" id="pulse"></div>
+      <span id="status-txt">Connecting…</span>
+    </div>
+  </div>
+</nav>
+
+<main>
+
+  <!-- STAT CARDS -->
+  <div class="stats-row fu">
+    <div class="stat-card" style="--al:#38bdf8">
+      <div class="stat-label">Model Algorithm</div>
+      <div class="stat-value" id="sc-model" style="font-size:14px;padding-top:4px;color:#38bdf8;line-height:1.3">—</div>
+      <div class="stat-badge" style="background:rgba(56,189,248,0.1);color:#38bdf8" id="sc-status">Not Connected</div>
+    </div>
+    <div class="stat-card" style="--al:#34d399">
+      <div class="stat-label">Test Accuracy</div>
+      <div class="stat-value" id="sc-acc" style="color:#34d399">—</div>
+      <div class="stat-badge" style="background:rgba(52,211,153,0.1);color:#34d399">on test set</div>
+    </div>
+    <div class="stat-card" style="--al:#a78bfa">
+      <div class="stat-label">F1-Macro Score</div>
+      <div class="stat-value" id="sc-f1" style="color:#a78bfa">—</div>
+      <div class="stat-badge" style="background:rgba(167,139,250,0.1);color:#a78bfa">macro avg</div>
+    </div>
+    <div class="stat-card" style="--al:#fb923c">
+      <div class="stat-label">Predictions Run</div>
+      <div class="stat-value" id="sc-preds" style="color:#fb923c">0</div>
+      <div class="stat-badge" style="background:rgba(251,146,60,0.1);color:#fb923c">this session</div>
+    </div>
+  </div>
+
+  <!-- INPUT -->
+  <div class="section-label fu fd1">⬆ Input Data</div>
+  <div class="input-panel fu fd2">
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-icon ci-blue">🎯</div>
+        <div><div class="card-title">Run Prediction</div><div class="card-sub">CSV upload or JSON paste</div></div>
+      </div>
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('csv',this)">📄 CSV Upload</button>
+        <button class="tab" onclick="switchTab('json',this)">{ } JSON</button>
+      </div>
+      <div id="tab-csv">
+        <div class="drop-zone" id="drop-zone">
+          <input type="file" id="csv-file" accept=".csv" onchange="onFile(event)"/>
+          <div class="dz-icon">☁️</div>
+          <div class="dz-title">Drop CSV file here</div>
+          <div class="dz-hint">Unlabeled data · columns must match training features</div>
+          <div class="dz-file" id="dz-file">📄 <span id="dz-name"></span></div>
+        </div>
+      </div>
+      <div id="tab-json" style="display:none">
+        <textarea class="json-area" id="json-input" placeholder='[
+  {
+    "sepal length (cm)": 5.1,
+    "sepal width (cm)": 3.5,
+    "petal length (cm)": 1.4,
+    "petal width (cm)": 0.2
+  }
+]'></textarea>
+      </div>
+      <button class="btn-predict" id="predict-btn" onclick="runPrediction()" disabled>
+        <span id="btn-txt">⚡ Run Prediction</span>
+      </button>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-icon ci-purple">📋</div>
+        <div><div class="card-title">Model Info</div><div class="card-sub">Features & output classes</div></div>
+      </div>
+      <div style="margin-bottom:14px;">
+        <div class="card-sub" style="margin-bottom:8px;text-transform:uppercase;letter-spacing:0.08em;">Input Features</div>
+        <div id="features-list" style="display:flex;flex-wrap:wrap;gap:6px;">
+          <div class="empty" style="width:100%;padding:16px 0;font-size:10px">Connect to API to see features</div>
+        </div>
+      </div>
+      <div>
+        <div class="card-sub" style="margin-bottom:8px;text-transform:uppercase;letter-spacing:0.08em;">Output Classes</div>
+        <div id="classes-list" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="section-label fu fd3">📊 Analytics &amp; Visualizations</div>
+  <div class="charts-grid fu fd3">
+
+    <!-- 1. PIE -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-icon ci-blue">🥧</div>
+        <div><div class="card-title">Class Distribution</div><div class="card-sub">Pie · predicted labels</div></div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="chart-pie" style="display:none"></canvas>
+        <div class="empty" id="pie-empty"><div class="empty-icon">🥧</div>Run a prediction</div>
+      </div>
+    </div>
+
+    <!-- 2. RADAR (Spider) -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-icon ci-purple">🕸️</div>
+        <div><div class="card-title">Confidence Radar</div><div class="card-sub">Avg probability per class · </div></div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="chart-radar" style="display:none"></canvas>
+        <div class="empty" id="radar-empty"><div class="empty-icon">🕸️</div>Run a prediction</div>
+      </div>
+    </div>
+
+    <!-- 3. BAR -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-icon ci-green">📊</div>
+        <div><div class="card-title">Confidence Per Sample</div><div class="card-sub">Bar · green=high, red=low</div></div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="chart-bar" style="display:none"></canvas>
+        <div class="empty" id="bar-empty"><div class="empty-icon">📊</div>Run a prediction</div>
+      </div>
+    </div>
+
+    <!-- 4. LINE -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-icon ci-orange">📈</div>
+        <div><div class="card-title">Confidence Trend</div><div class="card-sub">Line · sample by sample</div></div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="chart-line" style="display:none"></canvas>
+        <div class="empty" id="line-empty"><div class="empty-icon">📈</div>Run a prediction</div>
+      </div>
+    </div>
+
+    <!-- 5. HORIZONTAL BAR -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-icon ci-blue">🔢</div>
+        <div><div class="card-title">Prediction Counts</div><div class="card-sub">Horizontal bar · per class</div></div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="chart-hbar" style="display:none"></canvas>
+        <div class="empty" id="hbar-empty"><div class="empty-icon">🔢</div>Run a prediction</div>
+      </div>
+    </div>
+
+    <!-- 6. DOUGHNUT -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-icon ci-purple">🎯</div>
+        <div><div class="card-title">Confidence Buckets</div><div class="card-sub">Doughnut · Low / Mid / High</div></div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="chart-doughnut" style="display:none"></canvas>
+        <div class="empty" id="doughnut-empty"><div class="empty-icon">🎯</div>Run a prediction</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RESULTS TABLE -->
+  <div class="section-label fu fd4">📋 Prediction Results</div>
+  <div class="card fu fd4">
+    <div class="card-head">
+      <div class="card-icon ci-green">📋</div>
+      <div>
+        <div class="card-title">Full Results Table</div>
+        <div class="card-sub" id="tbl-sub">No predictions yet</div>
+      </div>
+    </div>
+    <div id="results-area">
+      <div class="empty">
+        <div class="empty-icon">🤖</div>
+        Upload a CSV or paste JSON above, then click Run Prediction
+      </div>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<div id="toast"><span id="t-icon"></span><span id="t-msg"></span></div>
+
+<script>
+/* ── GLOBALS ── */
+let activeTab = 'csv', health = null, totalPreds = 0, charts = {};
+
+const CLS_COLORS = ['#38bdf8','#a78bfa','#34d399','#fb923c','#f472b6','#facc15','#60a5fa','#f87171'];
+const CLS_BG     = CLS_COLORS.map(c => c + '26');
+
+Chart.defaults.color       = '#64748b';
+Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+Chart.defaults.font.family = "'Space Mono', monospace";
+Chart.defaults.font.size   = 10;
+Chart.defaults.plugins.legend.labels.boxWidth = 10;
+Chart.defaults.plugins.legend.labels.padding  = 14;
+
+const api = () => document.getElementById('api-url-input').value.replace(/\/$/,'');
+
+/* ── HEALTH ── */
+async function checkHealth() {
+  const pulse = document.getElementById('pulse');
+  const txt   = document.getElementById('status-txt');
+  pulse.className = 'pulse';
+  txt.textContent = 'Connecting…';
+  try {
+    const r = await fetch(`${api()}/health`);
+    health  = await r.json();
+    pulse.className = 'pulse on';
+    txt.textContent = health.model_name || 'Ready';
+    document.getElementById('sc-model').textContent  = health.model_name || '—';
+    document.getElementById('sc-acc').textContent    = health.test_accuracy ? (health.test_accuracy*100).toFixed(1)+'%' : '—';
+    document.getElementById('sc-f1').textContent     = health.test_f1_macro ? (health.test_f1_macro*100).toFixed(1)+'%'  : '—';
+    document.getElementById('sc-status').textContent = '✅ Connected';
+    renderFeatures(health.features || []);
+    renderClasses(health.classes   || []);
+    document.getElementById('predict-btn').disabled = false;
+    toast('✅', `Connected · ${health.model_name}`);
+  } catch(e) {
+    pulse.className = 'pulse err';
+    txt.textContent = 'Offline';
+    document.getElementById('predict-btn').disabled = true;
+    toast('❌','Cannot reach API — is the server running?');
+  }
+}
+
+/* ── FEATURE & CLASS TAGS ── */
+function renderFeatures(feats) {
+  const el = document.getElementById('features-list');
+  if (!feats.length) { el.innerHTML = '<span style="color:var(--muted);font-size:10px">None returned</span>'; return; }
+  el.innerHTML = feats.map((f,i) =>
+    `<span style="padding:3px 9px;border-radius:5px;background:var(--s3);font-family:var(--mono);font-size:9px;color:var(--muted)"><span style="color:#38bdf8;margin-right:3px">${i+1}.</span>${f}</span>`
+  ).join('');
+}
+
+function renderClasses(cls) {
+  document.getElementById('classes-list').innerHTML = cls.map((c,i) =>
+    `<span style="padding:4px 11px;border-radius:6px;background:${CLS_BG[i%8]};border:1px solid ${CLS_COLORS[i%8]}44;font-family:var(--mono);font-size:10px;color:${CLS_COLORS[i%8]}">${c}</span>`
+  ).join('');
+}
+
+/* ── TABS ── */
+function switchTab(t, btn) {
+  activeTab = t;
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-csv').style.display  = t==='csv'  ? 'block':'none';
+  document.getElementById('tab-json').style.display = t==='json' ? 'block':'none';
+}
+
+/* ── FILE SELECT ── */
+function onFile(e) {
+  const f = e.target.files[0]; if (!f) return;
+  document.getElementById('dz-name').textContent = `${f.name} · ${(f.size/1024).toFixed(1)} KB`;
+  document.getElementById('dz-file').style.display = 'flex';
+}
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave',() => dz.classList.remove('over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('over');
+  const f = e.dataTransfer.files[0];
+  if (f?.name.endsWith('.csv')) { document.getElementById('csv-file').files = e.dataTransfer.files; onFile({target:{files:e.dataTransfer.files}}); }
+});
+
+/* ── RUN PREDICTION ── */
+async function runPrediction() {
+  const btn = document.getElementById('predict-btn');
+  document.getElementById('btn-txt').innerHTML = '<div class="spinner"></div> Running…';
+  btn.disabled = true;
+  try {
+    let res;
+    if (activeTab === 'csv') {
+      const file = document.getElementById('csv-file').files[0];
+      if (!file) { toast('⚠️','Select a CSV file first'); return; }
+      // Preview CSV columns before sending so user sees a match report
+      await previewCSVColumns(file);
+      const fd = new FormData(); fd.append('file', file);
+      res = await fetch(`${api()}/predict/csv`, {method:'POST',body:fd});
+    } else {
+      let raw = document.getElementById('json-input').value.trim();
+      if (!raw) { toast('⚠️','JSON input is empty'); return; }
+      const parsed = JSON.parse(raw);
+      const body   = Array.isArray(parsed)?{data:parsed}:{data:[parsed]};
+      res = await fetch(`${api()}/predict`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    }
+    if (!res.ok) { const e=await res.json(); throw new Error(e.detail||res.statusText); }
+    const data = await res.json();
+    totalPreds += data.n_samples;
+    document.getElementById('sc-preds').textContent = totalPreds;
+    renderTable(data);
+    renderAllCharts(data);
+    toast('✅',`${data.n_samples} prediction${data.n_samples!==1?'s':''} · ${data.elapsed_ms}ms`);
+  } catch(e) {
+    // Show the full error message — especially useful for column mismatch errors
+    const msg = e.message || 'Unknown error';
+    toast('❌', msg.length > 80 ? msg.slice(0,80)+'…' : msg);
+    // Also show full error in results area
+    document.getElementById('results-area').innerHTML = `
+      <div style="padding:20px;background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);border-radius:10px;font-family:var(--mono);font-size:11px;">
+        <div style="color:#f87171;font-weight:700;margin-bottom:8px">❌ Prediction Failed</div>
+        <div style="color:var(--muted);line-height:1.7">${msg}</div>
+        <div style="margin-top:12px;color:var(--muted);font-size:10px">
+          💡 Make sure your CSV columns match the model's expected features shown in the "Model Info" panel.
+        </div>
+      </div>`;
+  }
+  finally {
+    document.getElementById('btn-txt').textContent = '⚡ Run Prediction';
+    btn.disabled = false;
+  }
+}
+
+/* ── COLOR HELPERS ── */
+function classIdx(label) {
+  const cls = health?.classes||[]; const i=cls.indexOf(String(label));
+  return i===-1 ? Math.abs([...String(label)].reduce((a,c)=>a+c.charCodeAt(0),0))%8 : i%8;
+}
+const col   = l => CLS_COLORS[classIdx(l)];
+const colBg = l => CLS_BG[classIdx(l)];
+
+/* ── RESULTS TABLE ── */
+function renderTable(data) {
+  const hasConf = data.predictions[0]?.confidence != null;
+  document.getElementById('tbl-sub').textContent = `${data.n_samples} rows · ${data.model_name} · ${data.elapsed_ms}ms`;
+  let html = `<div class="table-scroll"><table><thead><tr>
+    <th>#</th><th>Predicted Class</th>
+    ${hasConf?'<th>Confidence</th><th>Class Probabilities</th>':''}
+  </tr></thead><tbody>`;
+
+  data.predictions.forEach((p,i) => {
+    const confPct = hasConf ? Math.round(p.confidence*100) : null;
+    const confColor = confPct>=70?'#34d399':confPct>=45?'#facc15':'#f87171';
+    let probBars = '';
+    if (p.class_probabilities) {
+      probBars = Object.entries(p.class_probabilities).sort((a,b)=>b[1]-a[1]).map(([cls,prob])=>{
+        const pct=Math.round(prob*100);
+        return `<span style="display:inline-flex;align-items:center;gap:4px;margin-right:8px">
+          <span style="color:${col(cls)};font-size:9px">${cls}</span>
+          <span style="display:inline-block;width:${Math.max(pct,2)}px;height:3px;border-radius:2px;background:${col(cls)};opacity:0.85"></span>
+          <span style="color:var(--muted);font-size:9px">${pct}%</span>
+        </span>`;
+      }).join('');
+    }
+    html += `<tr>
+      <td style="color:var(--muted)">${i+1}</td>
+      <td><span class="pred-chip" style="background:${colBg(p.prediction)};color:${col(p.prediction)}">${p.prediction}</span></td>
+      ${hasConf?`
+        <td><div class="conf-row">
+          <div class="conf-bg"><div class="conf-fill" style="width:${confPct}%;background:${confColor}"></div></div>
+          <div class="conf-num" style="color:${confColor}">${confPct}%</div>
+        </div></td>
+        <td>${probBars}</td>
+      `:''}
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+  document.getElementById('results-area').innerHTML = html;
+}
+
+/* ── CHARTS ── */
+function destroyChart(id) { if(charts[id]){charts[id].destroy();delete charts[id];} }
+function showCanvas(cid,eid) { document.getElementById(eid).style.display='none'; document.getElementById(cid).style.display='block'; }
+
+function renderAllCharts(data) {
+  const preds = data.predictions;
+  const cls   = health?.classes || [...new Set(preds.map(p=>String(p.prediction)))];
+
+  // counts
+  const counts = {}; cls.forEach(c=>counts[c]=0);
+  preds.forEach(p=>{ const k=String(p.prediction); counts[k]=(counts[k]||0)+1; });
+
+  // avg prob per class
+  const confSums={}, confCnt={}; cls.forEach(c=>{confSums[c]=0;confCnt[c]=0;});
+  preds.forEach(p=>{ if(p.class_probabilities){Object.entries(p.class_probabilities).forEach(([c,v])=>{confSums[c]=(confSums[c]||0)+v;confCnt[c]=(confCnt[c]||0)+1;}); }});
+  const avgConf = cls.map(c=>confCnt[c]?+(confSums[c]/confCnt[c]*100).toFixed(1):0);
+
+  // all conf values
+  const allConf = preds.map(p=>p.confidence!=null?Math.round(p.confidence*100):null).filter(v=>v!==null);
+
+  // 1. PIE
+  destroyChart('pie'); showCanvas('chart-pie','pie-empty');
+  charts.pie = new Chart(document.getElementById('chart-pie'),{
+    type:'pie',
+    data:{labels:cls,datasets:[{data:cls.map(c=>counts[c]||0),backgroundColor:cls.map((_,i)=>CLS_BG[i%8]),borderColor:cls.map((_,i)=>CLS_COLORS[i%8]),borderWidth:2,hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.parsed}`}}},animation:{animateRotate:true,duration:900}}
+  });
+
+  // 2. RADAR (الدائرة المثلثية)
+  destroyChart('radar'); showCanvas('chart-radar','radar-empty');
+  charts.radar = new Chart(document.getElementById('chart-radar'),{
+    type:'radar',
+    data:{labels:cls,datasets:[{label:'Avg Confidence %',data:avgConf,backgroundColor:'rgba(167,139,250,0.18)',borderColor:'#a78bfa',borderWidth:2,pointBackgroundColor:'#a78bfa',pointRadius:4,pointHoverRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{r:{min:0,max:100,ticks:{stepSize:25,color:'#475569',backdropColor:'transparent'},grid:{color:'rgba(255,255,255,0.07)'},angleLines:{color:'rgba(255,255,255,0.07)'},pointLabels:{color:'#94a3b8',font:{size:10}}}},plugins:{legend:{display:false}},animation:{duration:900}}
+  });
+
+  // 3. BAR
+  destroyChart('bar'); showCanvas('chart-bar','bar-empty');
+  charts.bar = new Chart(document.getElementById('chart-bar'),{
+    type:'bar',
+    data:{labels:preds.map((_,i)=>`#${i+1}`),datasets:[{label:'Confidence %',data:allConf,backgroundColor:allConf.map(v=>v>=70?'rgba(52,211,153,0.75)':v>=45?'rgba(250,204,21,0.75)':'rgba(248,113,113,0.75)'),borderRadius:4,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{y:{min:0,max:100,ticks:{stepSize:25},grid:{color:'rgba(255,255,255,0.05)'}},x:{grid:{display:false}}},plugins:{legend:{display:false}},animation:{duration:900}}
+  });
+
+  // 4. LINE
+  destroyChart('line'); showCanvas('chart-line','line-empty');
+  charts.line = new Chart(document.getElementById('chart-line'),{
+    type:'line',
+    data:{labels:preds.map((_,i)=>`#${i+1}`),datasets:[{label:'Confidence %',data:allConf,borderColor:'#38bdf8',backgroundColor:'rgba(56,189,248,0.08)',borderWidth:2,fill:true,tension:0.42,pointRadius:3,pointBackgroundColor:'#38bdf8',pointHoverRadius:5}]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{y:{min:0,max:100,ticks:{stepSize:25},grid:{color:'rgba(255,255,255,0.05)'}},x:{grid:{display:false}}},plugins:{legend:{display:false}},animation:{duration:900}}
+  });
+
+  // 5. HORIZONTAL BAR
+  destroyChart('hbar'); showCanvas('chart-hbar','hbar-empty');
+  charts.hbar = new Chart(document.getElementById('chart-hbar'),{
+    type:'bar',
+    data:{labels:cls,datasets:[{label:'Count',data:cls.map(c=>counts[c]||0),backgroundColor:cls.map((_,i)=>CLS_BG[i%8]),borderColor:cls.map((_,i)=>CLS_COLORS[i%8]),borderWidth:1,borderRadius:6,borderSkipped:false}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{beginAtZero:true,ticks:{stepSize:1},grid:{color:'rgba(255,255,255,0.05)'}},y:{grid:{display:false}}},plugins:{legend:{display:false}},animation:{duration:900}}
+  });
+
+  // 6. DOUGHNUT
+  destroyChart('doughnut'); showCanvas('chart-doughnut','doughnut-empty');
+  const low=allConf.filter(v=>v<40).length, mid=allConf.filter(v=>v>=40&&v<70).length, high=allConf.filter(v=>v>=70).length;
+  charts.doughnut = new Chart(document.getElementById('chart-doughnut'),{
+    type:'doughnut',
+    data:{labels:['Low (<40%)','Medium (40–70%)','High (>70%)'],datasets:[{data:[low,mid,high],backgroundColor:['rgba(248,113,113,0.22)','rgba(250,204,21,0.22)','rgba(52,211,153,0.22)'],borderColor:['#f87171','#facc15','#34d399'],borderWidth:2,hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.parsed}`}}},animation:{animateRotate:true,duration:900}}
+  });
+}
+
+/* ── CSV COLUMN PREVIEW ── */
+async function previewCSVColumns(file) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const firstLine = e.target.result.split('\n')[0];
+      const csvCols   = firstLine.split(',').map(c => c.trim().replace(/^"|"$/g,''));
+      const needed    = health?.features || [];
+      const target    = health?.target_col || '';
+
+      // Find columns after removing target
+      const csvNoTarget = csvCols.filter(c => c !== target);
+      const matched   = needed.filter(c => csvNoTarget.includes(c));
+      const missing   = needed.filter(c => !csvNoTarget.includes(c));
+      const extra     = csvNoTarget.filter(c => !needed.includes(c));
+
+      // Build a column report card
+      let html = `<div style="margin-top:12px;padding:12px;background:var(--s3);border-radius:8px;font-family:var(--mono);font-size:10px;">`;
+      html += `<div style="color:var(--muted);margin-bottom:8px">📊 CSV Column Report (${csvCols.length} cols found)</div>`;
+      if (target && csvCols.includes(target))
+        html += `<div style="color:#facc15;margin-bottom:4px">⚠️ Target column "<b>${target}</b>" detected — will be auto-removed</div>`;
+      if (matched.length)
+        html += `<div style="color:#34d399;margin-bottom:4px">✅ ${matched.length}/${needed.length} features matched</div>`;
+      if (missing.length)
+        html += `<div style="color:#f87171;margin-bottom:4px">❌ Missing: ${missing.slice(0,4).join(', ')}${missing.length>4?` +${missing.length-4} more`:''}</div>`;
+      if (extra.length)
+        html += `<div style="color:var(--muted)">🗑️ Extra (will drop): ${extra.slice(0,3).join(', ')}${extra.length>3?` +${extra.length-3} more`:''}</div>`;
+      html += `</div>`;
+
+      document.getElementById('dz-file').innerHTML = '📄 <span id="dz-name">' + file.name + ' · ' + (file.size/1024).toFixed(1) + ' KB</span>' + html;
+      document.getElementById('dz-file').style.display = 'block';
+      resolve();
+    };
+    reader.readAsText(file.slice(0, 4096)); // read only first 4KB for speed
+  });
+}
+
+/* ── TOAST ── */
+let tt;
+function toast(icon,msg){
+  clearTimeout(tt);
+  document.getElementById('t-icon').textContent=icon;
+  document.getElementById('t-msg').textContent=msg;
+  const el=document.getElementById('toast'); el.classList.add('show');
+  tt=setTimeout(()=>el.classList.remove('show'),3800);
+}
+
+checkHealth();
+</script>
+</body>
+</html>
